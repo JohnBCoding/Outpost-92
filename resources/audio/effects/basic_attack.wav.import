@@ -1,0 +1,21 @@
+[remap]
+
+importer="wav"
+type="AudioStreamSample"
+path="res://.import/basic_attack.wav-54dcd90e4b62fa2939cd16f211b8f492.sample"
+
+[deps]
+
+source_file="res://resources/audio/effects/basic_attack.wav"
+dest_files=[ "res://.import/basic_attack.wav-54dcd90e4b62fa2939cd16f211b8f492.sample" ]
+
+[params]
+
+force/8_bit=false
+force/mono=false
+force/max_rate=false
+force/max_rate_hz=44100
+edit/trim=true
+edit/normalize=false
+edit/loop=false
+compress/mode=0
