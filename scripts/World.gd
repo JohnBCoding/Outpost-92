@@ -21,11 +21,57 @@ enum TileType {
 	TRASH,
 }
 
+enum States {
+	PlayerTurn
+	AITurn
+}
+
+# Turn system
+class TurnSorter:
+	static func sort_ascending(a, b):
+		if a[0] < b[0]:
+			return true
+		return false
+var turns = []
+var current_turn = null
+var state = States.PlayerTurn
+
+func get_turn():
+	var turn = turns.pop_front()
+	if turn:
+		if current_turn:
+			if current_turn[1]:
+				current_turn[1].can_act = false
+				turns.append([current_turn[0]+10, current_turn[1]])
+				turns.sort_custom(TurnSorter, "sort_ascending")
+			
+		current_turn = turn
+		if turn[1]:
+			turn[1].can_act = true
+		else:
+			turns.erase(turn[1])
+			get_turn()
+			return
+		#print(turns)
+	
+	# Refresh astar with new mob locations.
+	for mob in mobs:
+		if !mob:
+			mobs.erase(mob)
+	tile_map.generate_astar(mobs)
+	
+	
 func _ready():
-	audio.volume_db = -15
+	audio.volume_db = -5
 	goto_new_level()
 	
 	ui.init_ui(player.stats)
+	
+	# Init turns
+	for mob in mobs:
+		turns.append([(randi() % 4)+1, mob])
+	current_turn = [0, player]
+	turns.sort_custom(TurnSorter, "sort_ascending")
 
 func _process(_delta):
 	if !player:
@@ -35,16 +81,6 @@ func _process(_delta):
 		ui.set_global_position(Vector2(2, 116))
 	elif player.global_position.y > (get_viewport().size.y/config.tile_size):
 		ui.set_global_position(Vector2(2, 2))
-		
-	if player.can_act == false:
-		if !player.tween.is_active():
-			for mob in mobs:
-				if mob:
-					mob.can_act = true
-				else:
-					mobs.erase(mob)
-			player.can_act = true
-			tile_map.generate_astar(mobs)
 
 #### Signals
 func _on_Player_bumped_something(entity_pos, ray):
@@ -131,3 +167,5 @@ func create_mobs(rooms):
 			main.add_child(mob)
 			mob.global_position = new_pos*config.tile_size
 			mobs.append(mob)
+			
+

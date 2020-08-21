@@ -1,19 +1,37 @@
 extends "res://scripts/Entity.gd"
 
 onready var vis_map = get_parent().get_node("VisibilityMap")
+var input_buffer = []
 
 func _ready():
 	call_deferred("update_visuals")
-	
+
+func _process(_delta):
+	if can_act && input_buffer:
+		var key = input_buffer.pop_front()
+		if key in config.inputs.keys():
+			move_entity(config.inputs[key])
+			end_turn()
+		
 func _unhandled_input(event):
-	if !can_act:
-		return
 	if tween.is_active():
 		return
+
 	for dir in config.inputs.keys():
 		if event.is_action_pressed(dir):
+			if !can_act:
+				input_buffer.append(dir)
+				if len(input_buffer) > 3:
+					input_buffer.pop_front()
+				return
 			move_entity(config.inputs[dir])
-			can_act = false
+			end_turn()
+			
+func end_turn():
+	can_act = false
+	yield($Tween, "tween_all_completed")
+	yield(get_tree().create_timer(.05), "timeout")
+	get_parent().get_turn()
 
 func update_visuals():
 	yield(get_tree().create_timer(.15), "timeout")
