@@ -1,13 +1,16 @@
 extends "res://scripts/Entity.gd"
 
+onready var tile_map = get_parent().get_node("TileMap")
 onready var vis_map = get_parent().get_node("VisibilityMap")
+
 var input_buffer = []
 
 func _ready():
 	call_deferred("update_visuals")
 
 func _process(_delta):
-	if can_act && input_buffer:
+	# Handle input buffer
+	if can_act && input_buffer && !tween.is_active():
 		var key = input_buffer.pop_front()
 		if key in config.inputs.keys():
 			move_entity(config.inputs[key])
@@ -30,7 +33,7 @@ func _unhandled_input(event):
 func end_turn():
 	can_act = false
 	yield($Tween, "tween_all_completed")
-	yield(get_tree().create_timer(.05), "timeout")
+	yield(get_tree().create_timer(.01), "timeout")
 	get_parent().get_turn()
 
 func update_visuals():
@@ -46,6 +49,7 @@ func update_visuals():
 				var point = center(x, y) + Vector2(x_dir, y_dir) * config.tile_size / 2
 				
 				var blocked = space_state.intersect_ray(player_center, point, [self], collision_layer)
+
 				if !blocked || (blocked.position - point).length() < 1:
 					vis_map.set_cell(x, y, -1)
 					

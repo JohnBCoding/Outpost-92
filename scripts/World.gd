@@ -47,7 +47,12 @@ func get_turn():
 			
 		current_turn = turn
 		if turn[1]:
+			if turn[1].name=="Player":
+				yield(get_tree().create_timer(.1), "timeout")
 			turn[1].can_act = true
+			if !turn[1].name == "Player":
+				turn[1].run_ai()
+				
 		else:
 			turns.erase(turn[1])
 			get_turn()
@@ -64,14 +69,9 @@ func get_turn():
 func _ready():
 	audio.volume_db = -5
 	goto_new_level()
-	
+
 	ui.init_ui(player.stats)
-	
-	# Init turns
-	for mob in mobs:
-		turns.append([(randi() % 4)+1, mob])
-	current_turn = [0, player]
-	turns.sort_custom(TurnSorter, "sort_ascending")
+
 
 func _process(_delta):
 	if !player:
@@ -107,6 +107,11 @@ func handle_bumped_tile(tile_pos):
 		TileType.STAIRS_INACTIVE:
 			audio.stream = audio.bump_effect
 			audio.play()
+		TileType.STAIRS_ACTIVE:
+			audio.stream = audio.bump_effect
+			audio.play()
+			yield($Player/Tween, "tween_all_completed")
+			goto_new_level()
 		TileType.DOOR:
 			tile_map.set_cell(tile_pos[0], tile_pos[1], 1)
 			audio.stream = audio.door_open_effect
@@ -130,32 +135,51 @@ func goto_new_level():
 	
 	create_player(starting_position)
 	create_mobs(rooms)
+	reset_turns()
 	
 	# Generate astar pathfinding.
 	tile_map.generate_astar(mobs)
 	
+func reset_turns():
+	turns = []
+	current_turn = null
+	
+	# Init turns
+	for mob in mobs:
+		turns.append([(randi() % 4)+1, mob])
+	current_turn = [0, player]
+	turns.sort_custom(TurnSorter, "sort_ascending")
+	
 func create_player(starting_position):
-	# Create instance
-	player = Player.instance()
-	
-	# Setup stats
-	player.stats.hp = 25
-	player.stats.max_hp = 25
-	player.stats.attack = 1
-	player.stats.defense = 0
-	player.stats.power = 0
-	
-	# Add signal connections
-	player.connect("bumped_something", self, "_on_Player_bumped_something")
-	player.connect("damage_taken", ui, "_on_Player_damage_taken")
-	
-	# Add to tree and set its starting position
-	var main = get_tree().current_scene
-	main.add_child(player)
+	if !player:
+		# Create instance
+		player = Player.instance()
+		
+		# Setup stats
+		player.stats.hp = 25
+		player.stats.max_hp = 25
+		player.stats.attack = 1
+		player.stats.defense = 0
+		player.stats.power = 0
+		
+		# Add signal connections
+		player.connect("bumped_something", self, "_on_Player_bumped_something")
+		player.connect("damage_taken", ui, "_on_Player_damage_taken")
+		
+		# Add to tree and set its starting position
+		var main = get_tree().current_scene
+		main.add_child(player)
+		
 	player.global_position = starting_position
 	player.can_act = true
-	
+
+func reset_mobs():
+	for mob in mobs:
+		mob.queue_free()
+		
 func create_mobs(rooms):
+	reset_mobs()
+	mobs = []
 	randomize()
 	for room in rooms:
 		var x = randi() % int(room.size.x-1) + (room.position.x+1)

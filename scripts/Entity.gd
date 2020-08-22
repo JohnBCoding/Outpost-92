@@ -82,7 +82,7 @@ func combat_text(damage, crit=false):
 	var scene = get_tree().current_scene
 	combat_text.get_child(0).rect_global_position = Vector2(global_position.x - config.tile_size, global_position.y - (config.tile_size+2))
 	scene.add_child(combat_text)
-	combat_text.get_child(0).show_value(str(damage), Vector2(0, -config.tile_size), .5, (name=="Player"), crit)
+	combat_text.get_child(0).show_value(damage, Vector2(0, -config.tile_size), .5, (name=="Player"), crit)
 	
 func create_hit_effect():
 	var scene = get_tree().current_scene

@@ -3,6 +3,7 @@ extends TileMap
 onready var config = $"/root/Config"
 onready var astar = AStar.new()
 
+### Generation
 func reset_map():
 	for x in range(config.MAP_WIDTH):
 		for y in range(config.MAP_HEIGHT):
@@ -46,8 +47,15 @@ func create_map(_level):
 	# Actually create rooms
 	for room in rooms:
 		add_room_to_map(room)
-
-	return [rooms, get_room_center(rooms[0])]
+	
+	# Add entrance and exit stairs.
+	set_cell(rooms[0].position.x, rooms[0].position.y, 3)
+	set_cell(rooms[-1].position.x, rooms[-1].position.y, 2)
+	
+	# Add objects
+	add_objects(rooms)
+	
+	return [rooms, rooms[0].position]
 
 func get_room_center(room):	
 	return Vector2(room.position.x+int(room.size.x/2), room.position.y+int(room.size.y/2))
@@ -66,8 +74,18 @@ func add_v_tunnel_to_map(y1, y2, x):
 	for y in range(min(y1, y2), max(y1, y2)+1):
 		set_cell(x, y, 1)
 
-
-# Pathfinding
+func add_objects(rooms):
+	# Handles adding objects to the room such as barrels, chests etc.
+	randomize()
+	var objects = [get_parent().TileType.BARREL, get_parent().TileType.TRASH]
+	for room in rooms:
+		for i in range(randi() % config.MAX_OBJECT_PER_ROOM):
+			var x = randi() % int(room.size.x-1) + (room.position.x+1)
+			var y = randi() % int(room.size.y-1) + (room.position.y+1)
+			if get_cell(x, y) == get_parent().TileType.FLOOR:
+				set_cell(x, y, objects[(randi() % len(objects))])
+			
+### Pathfinding
 func generate_astar(mobs):
 	astar = AStar.new()
 	var points = add_walkable_cells()
@@ -78,7 +96,8 @@ func add_walkable_cells():
 	for x in range(config.MAP_WIDTH):
 		for y in range(config.MAP_HEIGHT):
 			var point = Vector2(x, y)
-			if get_cell(x, y) != 1:
+			var tile_type = get_cell(x, y)
+			if tile_type != 1 and tile_type != 3:
 				continue
 
 			points.append(point)

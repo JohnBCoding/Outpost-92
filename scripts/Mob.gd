@@ -16,17 +16,17 @@ func _process(_delta):
 		visible = false
 	else:
 		visible = true
-	
-	if can_act == true:
-		run_ai()
-		can_act = false
-		get_parent().get_turn()
 		
 func run_ai():
+	if !can_act:
+		return
+		
 	var distance = (position.distance_to(player.position))/config.tile_size
 	var dir = (position - player.position) / config.tile_size
 
 	chase_ai(distance, dir)
+	can_act = false
+	get_parent().get_turn()
 	
 func chase_ai(distance, dir):
 	if distance <= 1:
@@ -35,7 +35,7 @@ func chase_ai(distance, dir):
 		bump_tween(dir)
 		audio.stream = audio.basic_attack_effect
 		audio.play()
-	else:
+	elif distance <= 4:
 		# Get path indexs
 		var start_index = tile_map.calculate_point_index(position / config.tile_size)
 		var end_index = tile_map.calculate_point_index(player.position / config.tile_size)
@@ -46,20 +46,25 @@ func chase_ai(distance, dir):
 		
 		# Do pathfinding if player is seen
 		if !movement_ray.is_colliding():
+			if last_known_target == null:
+				combat_text("!")
 			last_known_target = player.position
 			
 			var path = tile_map.astar.get_point_path(start_index, end_index)
 			if len(path) > 1:
 				var new_dir = Vector2(path[1].x - path[0].x,  path[1].y - path[0].y)
+				tile_map.astar.set_point_disabled(tile_map.calculate_point_index(path[1]), true)
 				move_entity(new_dir)
 		elif last_known_target:
 			end_index = tile_map.calculate_point_index(last_known_target / config.tile_size)
 			var path = tile_map.astar.get_point_path(start_index, end_index)
 			if len(path) > 1:
 				var new_dir = Vector2(path[1].x - path[0].x,  path[1].y - path[0].y)
+				tile_map.astar.set_point_disabled(tile_map.calculate_point_index(path[1]), true)
 				move_entity(new_dir)
 			else:
 				# Reached the last know target location so stop searching
 				last_known_target = null
+				combat_text("?")
 				
 

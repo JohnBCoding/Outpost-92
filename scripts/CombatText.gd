@@ -1,7 +1,9 @@
 extends Label
 
 func show_value(value, travel, duration, player=false, crit=false):
-	text = "-"+value
+	text = str(value)
+	if typeof(value) == TYPE_INT:
+		text = "-"+str(value)
 	rect_pivot_offset = rect_size / 2
 	
 	if !player:
