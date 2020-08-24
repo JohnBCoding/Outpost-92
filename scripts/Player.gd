@@ -4,6 +4,7 @@ onready var tile_map = get_parent().get_node("TileMap")
 onready var vis_map = get_parent().get_node("VisibilityMap")
 
 var input_buffer = []
+signal toggle_inventory(new_inventory, new_equipped)
 
 func _ready():
 	call_deferred("update_visuals")
@@ -12,27 +13,40 @@ func _process(_delta):
 	# Handle input buffer
 	if can_act && input_buffer && !tween.is_active():
 		var key = input_buffer.pop_front()
-		if key in config.inputs.keys():
-			move_entity(config.inputs[key])
+		if key in config.inputs["movement"].keys():
+			move_entity(config.inputs["movement"][key])
 			end_turn()
 		
 func _unhandled_input(event):
 	if tween.is_active():
 		return
 
-	for dir in config.inputs.keys():
+	for dir in config.inputs["movement"].keys():
 		if event.is_action_pressed(dir):
 			if !can_act:
 				input_buffer.append(dir)
 				if len(input_buffer) > 3:
 					input_buffer.pop_front()
 				return
-			move_entity(config.inputs[dir])
+			move_entity(config.inputs["movement"][dir])
 			end_turn()
+	
+	if event.is_action_pressed("inventory"):
+		emit_signal("toggle_inventory", inventory, equipped)
+	
+	elif event.is_action_pressed("weapon_skill"):
+		if can_act:
+			var skill = Skills["windslash"].instance()
+			var scene = get_tree().current_scene
+			skill.position = Vector2(position.x + (config.tile_size/2), position.y + (config.tile_size/2))
+			scene.add_child(skill)
+			end_turn()
+		
 			
 func end_turn():
 	can_act = false
-	yield($Tween, "tween_all_completed")
+	if tween.is_active():
+		yield($Tween, "tween_all_completed")
 	yield(get_tree().create_timer(.01), "timeout")
 	get_parent().get_turn()
 

@@ -17,4 +17,4 @@ func show_value(value, travel, duration, player=false, crit=false):
 			
 	$Tween.start()
 	yield($Tween, "tween_all_completed")
-	queue_free()
+	get_parent().queue_free()

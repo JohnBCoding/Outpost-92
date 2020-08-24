@@ -7,6 +7,11 @@ onready var audio = $"/root/AudioManager"
 const combatText = preload("res://scenes/CombatText.tscn")
 const hitEffect = preload("res://scenes/HitEffect.tscn")
 
+# Skills
+const Skills = {
+	"windslash": preload("res://scenes/skills/WindSlash.tscn")
+}
+
 # Movement
 onready var movement_ray = $MovementRay
 onready var tween = $Tween
@@ -23,7 +28,16 @@ var stats = {
 	defense = 0,
 	power = 0,
 }
+var sight_range = 6
 var hit = false
+
+# Invetory
+var inventory = []
+var equipped = {
+	"Main Hand": null,
+	"Off Hand": null,
+	"Armor": null
+}
 
 func _ready():
 	position = position.snapped(Vector2.ONE * config.tile_size)
@@ -77,12 +91,13 @@ func bump_tween(dir):
 	tween.start()
 
 # Particles and effects
-func combat_text(damage, crit=false):
+func combat_text(text, crit=false):
 	var combat_text = combatText.instance()
 	var scene = get_tree().current_scene
-	combat_text.get_child(0).rect_global_position = Vector2(global_position.x - config.tile_size, global_position.y - (config.tile_size+2))
+	var x_pos = (global_position.x - config.tile_size) - (len(str(text)) + 1 / 2 )
+	combat_text.get_child(0).rect_global_position = Vector2(x_pos, global_position.y - (config.tile_size+2))
 	scene.add_child(combat_text)
-	combat_text.get_child(0).show_value(damage, Vector2(0, -config.tile_size), .5, (name=="Player"), crit)
+	combat_text.get_child(0).show_value(text, Vector2(0, -config.tile_size), .5, (name=="Player"), crit)
 	
 func create_hit_effect():
 	var scene = get_tree().current_scene

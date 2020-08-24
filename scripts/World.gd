@@ -4,26 +4,19 @@ onready var config = $"/root/Config"
 onready var audio = $"/root/AudioManager"
 onready var tile_map = $TileMap
 onready var visibility_map = $VisibilityMap
-onready var ui = $UIBorder
 onready var Player = preload("res://scenes/Player.tscn")
 onready var Mob = preload("res://scenes/Mob.tscn")
+
+# UI
+onready var ui_status = $UI/Status
+onready var ui_inventory = $UI/Inventory
 
 var player = null
 var mobs = []
 
-enum TileType {
-	WALL,
-	FLOOR,
-	STAIRS_ACTIVE,
-	STAIRS_INACTIVE,
-	DOOR,
-	BARREL,
-	TRASH,
-}
-
 enum States {
-	PlayerTurn
-	AITurn
+	Main,
+	Inventory
 }
 
 # Turn system
@@ -34,7 +27,7 @@ class TurnSorter:
 		return false
 var turns = []
 var current_turn = null
-var state = States.PlayerTurn
+var state = States.Main
 
 func get_turn():
 	var turn = turns.pop_front()
@@ -44,15 +37,14 @@ func get_turn():
 				current_turn[1].can_act = false
 				turns.append([current_turn[0]+10, current_turn[1]])
 				turns.sort_custom(TurnSorter, "sort_ascending")
-			
+		
 		current_turn = turn
 		if turn[1]:
 			if turn[1].name=="Player":
-				yield(get_tree().create_timer(.1), "timeout")
+				yield(get_tree().create_timer(.125), "timeout")
 			turn[1].can_act = true
 			if !turn[1].name == "Player":
 				turn[1].run_ai()
-				
 		else:
 			turns.erase(turn[1])
 			get_turn()
@@ -70,17 +62,20 @@ func _ready():
 	audio.volume_db = -5
 	goto_new_level()
 
-	ui.init_ui(player.stats)
+	ui_status.init_ui(player.stats)
 
 
 func _process(_delta):
 	if !player:
 		return
 	
+	# Readjust UI based on player position
 	if player.global_position.y < ((get_viewport().size.y/config.tile_size)/4)+8:
-		ui.set_global_position(Vector2(2, 116))
+		ui_status.set_global_position(Vector2(2, 116))
+		ui_inventory.set_global_position(Vector2(2, 66))
 	elif player.global_position.y > (get_viewport().size.y/config.tile_size):
-		ui.set_global_position(Vector2(2, 2))
+		ui_status.set_global_position(Vector2(2, 2))
+		ui_inventory.set_global_position(Vector2(2, 13))
 
 #### Signals
 func _on_Player_bumped_something(entity_pos, ray):
@@ -97,32 +92,37 @@ func _on_Player_bumped_something(entity_pos, ray):
 		audio.play()
 		collider.take_damage(player.stats.attack)
 	
+	
 func handle_bumped_tile(tile_pos):
 	var tile = tile_map.get_cellv(tile_pos)
 	
 	match tile:
-		TileType.WALL:
+		tile_map.TileType.WALL:
 			audio.stream = audio.bump_effect
 			audio.play()
-		TileType.STAIRS_INACTIVE:
+		tile_map.TileType.STAIRS_INACTIVE:
 			audio.stream = audio.bump_effect
 			audio.play()
-		TileType.STAIRS_ACTIVE:
+		tile_map.TileType.STAIRS_ACTIVE:
 			audio.stream = audio.bump_effect
 			audio.play()
 			yield($Player/Tween, "tween_all_completed")
 			goto_new_level()
-		TileType.DOOR:
+		tile_map.TileType.DOOR:
 			tile_map.set_cell(tile_pos[0], tile_pos[1], 1)
 			audio.stream = audio.door_open_effect
 			audio.play()
-		TileType.BARREL:
+		tile_map.TileType.BARREL:
 			tile_map.set_cell(tile_pos[0], tile_pos[1], 1)
 			audio.stream = audio.destroyable_effect
 			audio.play()
-		TileType.TRASH:
+		tile_map.TileType.TRASH:
 			tile_map.set_cell(tile_pos[0], tile_pos[1], 1)
 			audio.stream = audio.destroyable_effect
+			audio.play()
+		tile_map.TileType.CHEST_ACTIVE:
+			tile_map.set_cell(tile_pos[0], tile_pos[1], tile_map.TileType.CHEST_ACTIVE+1)
+			audio.stream = audio.chest_open_effect
 			audio.play()
 
 func goto_new_level():
@@ -164,7 +164,8 @@ func create_player(starting_position):
 		
 		# Add signal connections
 		player.connect("bumped_something", self, "_on_Player_bumped_something")
-		player.connect("damage_taken", ui, "_on_Player_damage_taken")
+		player.connect("damage_taken", ui_status, "_on_Player_damage_taken")
+		player.connect("toggle_inventory", ui_inventory, "_on_Player_toggle_inventory")
 		
 		# Add to tree and set its starting position
 		var main = get_tree().current_scene
@@ -185,7 +186,7 @@ func create_mobs(rooms):
 		var x = randi() % int(room.size.x-1) + (room.position.x+1)
 		var y = randi() % int(room.size.y-1) + (room.position.y+1)
 		var new_pos = Vector2(x, y)
-		if tile_map.get_cellv(new_pos) == TileType.FLOOR && (new_pos*config.tile_size) != player.global_position:
+		if tile_map.get_cellv(new_pos) == tile_map.TileType.FLOOR && (new_pos*config.tile_size) != player.global_position:
 			var mob = Mob.instance()
 			var main = get_tree().current_scene
 			main.add_child(mob)

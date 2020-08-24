@@ -3,6 +3,26 @@ extends TileMap
 onready var config = $"/root/Config"
 onready var astar = AStar.new()
 
+onready var Item = preload("res://scenes/Item.tscn")
+
+enum TileType {
+	WALL,
+	FLOOR,
+	STAIRS_ACTIVE,
+	STAIRS_INACTIVE,
+	DOOR,
+	BARREL,
+	TRASH,
+	CHEST_ACTIVE,
+	CHEST_INACTIVE,
+}
+
+onready var walkable_tile_types = [
+	TileType.FLOOR,
+	TileType.STAIRS_INACTIVE,
+	TileType.CHEST_INACTIVE,
+]
+
 ### Generation
 func reset_map():
 	for x in range(config.MAP_WIDTH):
@@ -54,6 +74,7 @@ func create_map(_level):
 	
 	# Add objects
 	add_objects(rooms)
+	add_items(rooms)
 	
 	return [rooms, rooms[0].position]
 
@@ -77,13 +98,36 @@ func add_v_tunnel_to_map(y1, y2, x):
 func add_objects(rooms):
 	# Handles adding objects to the room such as barrels, chests etc.
 	randomize()
-	var objects = [get_parent().TileType.BARREL, get_parent().TileType.TRASH]
+	var objects = [TileType.BARREL, TileType.TRASH, TileType.CHEST_ACTIVE]
 	for room in rooms:
 		for i in range(randi() % config.MAX_OBJECT_PER_ROOM):
 			var x = randi() % int(room.size.x-1) + (room.position.x+1)
 			var y = randi() % int(room.size.y-1) + (room.position.y+1)
-			if get_cell(x, y) == get_parent().TileType.FLOOR:
+			if get_cell(x, y) == TileType.FLOOR:
 				set_cell(x, y, objects[(randi() % len(objects))])
+				
+func add_items(rooms):
+	# Handles adding items to rooms such as coins, weapons etc
+	randomize()
+	var items = ["Coin"]
+	var item_num = 0
+	var max_items = randi() % config.MAX_ITEMS_PER_LEVEL
+	while item_num < max_items:
+		var room = rooms[(randi() % len(rooms))]
+		var x = randi() % int(room.size.x) + (room.position.x)
+		var y = randi() % int(room.size.y) + (room.position.y)
+		if get_cell(x, y) == TileType.FLOOR:
+			create_item("Coin", x, y)
+			item_num += 1
+				
+func create_item(name, x, y):
+	# Builds an item then palces it in the level.
+	var item = Item.instance()
+	var main = get_tree().current_scene
+	item.item_name = name
+	item.stackable = true
+	main.add_child(item)
+	item.global_position = Vector2(x, y)*config.tile_size
 			
 ### Pathfinding
 func generate_astar(mobs):
@@ -97,7 +141,7 @@ func add_walkable_cells():
 		for y in range(config.MAP_HEIGHT):
 			var point = Vector2(x, y)
 			var tile_type = get_cell(x, y)
-			if tile_type != 1 and tile_type != 3:
+			if !tile_type in walkable_tile_types:
 				continue
 
 			points.append(point)
