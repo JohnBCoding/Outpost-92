@@ -45,8 +45,7 @@ func _on_Item_area_entered(area):
 		var area_tile = vis_map.world_to_map(area.position)
 		var item_tile = vis_map.world_to_map(position)
 		if area_tile == item_tile:
-			audio.stream = audio.item_pickup_effect
-			audio.play()
+			audio.play_effect("item_pickup")
 			add_item_to_inventory(area)
 
 func _on_Item_area_exited(area):

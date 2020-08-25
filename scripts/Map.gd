@@ -170,9 +170,10 @@ func connect_cells(points, mobs):
 		
 		# Check if mob is blocking a point, if so, disable it.
 		for mob in mobs:
-			if mob.position == (point * config.tile_size):
-				astar.set_point_disabled(point_index, true)
-				break
+			if mob:
+				if mob.position == (point * config.tile_size):
+					astar.set_point_disabled(point_index, true)
+					break
 	
 func calculate_point_index(point):
 	return point.x + config.MAP_WIDTH * point.y

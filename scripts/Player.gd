@@ -4,6 +4,7 @@ onready var tile_map = get_parent().get_node("TileMap")
 onready var vis_map = get_parent().get_node("VisibilityMap")
 
 var input_buffer = []
+onready var States = get_parent().States
 signal toggle_inventory(new_inventory, new_equipped)
 
 func _ready():
@@ -28,27 +29,31 @@ func _unhandled_input(event):
 				if len(input_buffer) > 3:
 					input_buffer.pop_front()
 				return
-			move_entity(config.inputs["movement"][dir])
+			
+			if get_parent().state == States.Targeting:
+				var skill = Skills["windslash"].instance()
+				var scene = get_tree().current_scene
+				skill.position = Vector2(position.x + (config.tile_size/2), position.y + (config.tile_size/2))
+				skill.direction = config.inputs["movement"][dir]
+				scene.add_child(skill)
+				active_skill = skill
+				get_parent().change_state(States.Targeting)
+			else:
+				move_entity(config.inputs["movement"][dir])
 			end_turn()
 	
 	if event.is_action_pressed("inventory"):
-		emit_signal("toggle_inventory", inventory, equipped)
+		if get_parent().state == States.Main or get_parent().state == States.Inventory:
+			get_parent().change_state(States.Inventory)
+			emit_signal("toggle_inventory", inventory, equipped)
 	
 	elif event.is_action_pressed("weapon_skill"):
-		if can_act:
-			var skill = Skills["windslash"].instance()
-			var scene = get_tree().current_scene
-			skill.position = Vector2(position.x + (config.tile_size/2), position.y + (config.tile_size/2))
-			scene.add_child(skill)
-			end_turn()
-		
+		if can_act && (get_parent().state == States.Main or get_parent().state == States.Targeting):
+			get_parent().change_state(States.Targeting)
 			
-func end_turn():
-	can_act = false
-	if tween.is_active():
-		yield($Tween, "tween_all_completed")
-	yield(get_tree().create_timer(.01), "timeout")
-	get_parent().get_turn()
+	elif event.is_action_pressed("ui_cancel"):
+		get_parent().change_state(States.Main)
+		emit_signal("toggle_inventory", inventory, equipped)
 
 func update_visuals():
 	yield(get_tree().create_timer(.15), "timeout")

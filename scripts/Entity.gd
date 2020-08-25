@@ -11,6 +11,7 @@ const hitEffect = preload("res://scenes/HitEffect.tscn")
 const Skills = {
 	"windslash": preload("res://scenes/skills/WindSlash.tscn")
 }
+var active_skill = null
 
 # Movement
 onready var movement_ray = $MovementRay
@@ -48,7 +49,16 @@ func _process(_delta):
 		yield(get_tree().create_timer(.2), "timeout")
 		modulate = Color(1, 1, 1)
 		hit = false
-		
+
+func end_turn():
+	can_act = false
+	if tween.is_active():
+		yield($Tween, "tween_all_completed")
+	if active_skill:
+		yield(active_skill._completed(), "completed")
+	yield(get_tree().create_timer(.01), "timeout")
+	get_parent().get_turn()
+	
 func take_damage(damage):
 	damage = damage - stats.defense
 	create_hit_effect()
@@ -69,8 +79,7 @@ func move_entity(dir):
 	movement_ray.cast_to = dir * config.tile_size
 	movement_ray.force_raycast_update()
 	if !movement_ray.is_colliding():
-		audio.stream = audio.walk_effect
-		audio.play()
+		audio.play_effect("walk")
 		move_tween(dir)
 	else:
 		emit_signal("bumped_something", position, movement_ray)

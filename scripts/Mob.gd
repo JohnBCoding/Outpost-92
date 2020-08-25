@@ -33,8 +33,7 @@ func chase_ai(distance, dir):
 		player.take_damage(stats.attack)
 		position += -dir * config.tile_size
 		bump_tween(dir)
-		audio.stream = audio.basic_attack_effect
-		audio.play()
+		audio.play_effect("basic_attack")
 	elif distance <= 4:
 		# Get path indexs
 		var start_index = tile_map.calculate_point_index(position / config.tile_size)

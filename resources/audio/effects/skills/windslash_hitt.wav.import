@@ -1,0 +1,21 @@
+[remap]
+
+importer="wav"
+type="AudioStreamSample"
+path="res://.import/windslash_hitt.wav-6c3c8a7a5cfe6607411d0ffcdc475ad1.sample"
+
+[deps]
+
+source_file="res://resources/audio/effects/skills/windslash_hitt.wav"
+dest_files=[ "res://.import/windslash_hitt.wav-6c3c8a7a5cfe6607411d0ffcdc475ad1.sample" ]
+
+[params]
+
+force/8_bit=false
+force/mono=false
+force/max_rate=false
+force/max_rate_hz=44100
+edit/trim=false
+edit/normalize=false
+edit/loop=false
+compress/mode=0

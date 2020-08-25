@@ -16,7 +16,8 @@ var mobs = []
 
 enum States {
 	Main,
-	Inventory
+	Inventory,
+	Targeting
 }
 
 # Turn system
@@ -27,6 +28,7 @@ class TurnSorter:
 		return false
 var turns = []
 var current_turn = null
+var prev_state = States.Main
 var state = States.Main
 
 func get_turn():
@@ -77,6 +79,13 @@ func _process(_delta):
 		ui_status.set_global_position(Vector2(2, 2))
 		ui_inventory.set_global_position(Vector2(2, 13))
 
+func change_state(new_state):
+	if state == new_state:
+		state = prev_state
+	else:
+		prev_state = state
+		state = new_state
+	
 #### Signals
 func _on_Player_bumped_something(entity_pos, ray):
 	var collision_pos = ray.get_collision_normal()
@@ -88,8 +97,7 @@ func _on_Player_bumped_something(entity_pos, ray):
 		tile_pos -= collision_pos
 		handle_bumped_tile(tile_pos)
 	elif collider.is_in_group("mobs"):
-		audio.stream = audio.basic_attack_effect
-		audio.play()
+		audio.play_effect("basic_attack")
 		collider.take_damage(player.stats.attack)
 	
 	
@@ -98,32 +106,25 @@ func handle_bumped_tile(tile_pos):
 	
 	match tile:
 		tile_map.TileType.WALL:
-			audio.stream = audio.bump_effect
-			audio.play()
+			audio.play_effect("bump")
 		tile_map.TileType.STAIRS_INACTIVE:
-			audio.stream = audio.bump_effect
-			audio.play()
+			audio.play_effect("bump")
 		tile_map.TileType.STAIRS_ACTIVE:
-			audio.stream = audio.bump_effect
-			audio.play()
+			audio.play_effect("bump")
 			yield($Player/Tween, "tween_all_completed")
 			goto_new_level()
 		tile_map.TileType.DOOR:
 			tile_map.set_cell(tile_pos[0], tile_pos[1], 1)
-			audio.stream = audio.door_open_effect
-			audio.play()
+			audio.play_effect("door_open")
 		tile_map.TileType.BARREL:
 			tile_map.set_cell(tile_pos[0], tile_pos[1], 1)
-			audio.stream = audio.destroyable_effect
-			audio.play()
+			audio.play_effect("destroyable")
 		tile_map.TileType.TRASH:
 			tile_map.set_cell(tile_pos[0], tile_pos[1], 1)
-			audio.stream = audio.destroyable_effect
-			audio.play()
+			audio.play_effect("destroyable")
 		tile_map.TileType.CHEST_ACTIVE:
 			tile_map.set_cell(tile_pos[0], tile_pos[1], tile_map.TileType.CHEST_ACTIVE+1)
-			audio.stream = audio.chest_open_effect
-			audio.play()
+			audio.play_effect("chest_open")
 
 func goto_new_level():
 	tile_map.reset_map()
