@@ -12,7 +12,6 @@ func load_inventory(new_inventory):
 	inventory_list.clear()
 	var index = 0
 	for item in new_inventory:
-		set_bg = Color(0, 0, 0, 0)
 		var text = item.item_name
 		if item.item_info["stackable"]:
 			text = text + " x " + str(item.count)
