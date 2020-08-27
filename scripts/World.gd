@@ -7,6 +7,9 @@ onready var visibility_map = $VisibilityMap
 onready var Player = preload("res://scenes/Player.tscn")
 onready var Mob = preload("res://scenes/Mob.tscn")
 
+# Data files
+var item_data = null
+
 # UI
 onready var ui_status = $UI/Status
 onready var ui_inventory = $UI/Inventory
@@ -51,21 +54,28 @@ func get_turn():
 			turns.erase(turn[1])
 			get_turn()
 			return
-		#print(turns)
+	else:
+		player.can_act = true
 	
 	# Refresh astar with new mob locations.
 	for mob in mobs:
 		if !mob:
 			mobs.erase(mob)
 	tile_map.generate_astar(mobs)
+
+func _init():
+	# Load data
+	var file = File.new()
+	if file.open("res://data/items.json", File.READ) != OK:
+		return
 	
-	
+	item_data = JSON.parse(file.get_as_text()).result
+
 func _ready():
 	audio.volume_db = -5
 	goto_new_level()
 
-	ui_status.init_ui(player.stats)
-
+	ui_status.init_ui(player)
 
 func _process(_delta):
 	if !player:
@@ -98,7 +108,7 @@ func _on_Player_bumped_something(entity_pos, ray):
 		handle_bumped_tile(tile_pos)
 	elif collider.is_in_group("mobs"):
 		audio.play_effect("basic_attack")
-		collider.take_damage(player.stats.attack)
+		collider.take_damage(player.mod_stats.attack)
 	
 	
 func handle_bumped_tile(tile_pos):
@@ -125,14 +135,20 @@ func handle_bumped_tile(tile_pos):
 		tile_map.TileType.CHEST_ACTIVE:
 			tile_map.set_cell(tile_pos[0], tile_pos[1], tile_map.TileType.CHEST_ACTIVE+1)
 			audio.play_effect("chest_open")
+			tile_map.create_item("Steel Axe", 0, 0, false)
 
 func goto_new_level():
 	tile_map.reset_map()
 	visibility_map.reset_map()
 	
-	var map_data = tile_map.create_map(1)
-	var rooms = map_data[0]
-	var starting_position = map_data[1]*config.tile_size
+	var map_data = null
+	while true:
+		map_data = tile_map.create_map(1)
+		if map_data[0]:
+			break
+			
+	var rooms = map_data[1]
+	var starting_position = map_data[2]*config.tile_size
 	
 	create_player(starting_position)
 	create_mobs(rooms)
@@ -157,16 +173,18 @@ func create_player(starting_position):
 		player = Player.instance()
 		
 		# Setup stats
-		player.stats.hp = 25
-		player.stats.max_hp = 25
-		player.stats.attack = 1
-		player.stats.defense = 0
-		player.stats.power = 0
+		player.base_stats.hp = 25
+		player.base_stats.max_hp = 25
+		player.base_stats.attack = 1
+		player.base_stats.defense = 0
+		player.base_stats.power = 0
 		
-		# Add signal connections
+		# Add signal connections for the player
 		player.connect("bumped_something", self, "_on_Player_bumped_something")
 		player.connect("damage_taken", ui_status, "_on_Player_damage_taken")
+		player.connect("swapped_skill", ui_status, "_on_Player_swapped_skill")
 		player.connect("toggle_inventory", ui_inventory, "_on_Player_toggle_inventory")
+		ui_inventory.connect("item_used", player, "_on_Item_used_from_inventory")
 		
 		# Add to tree and set its starting position
 		var main = get_tree().current_scene
@@ -174,6 +192,8 @@ func create_player(starting_position):
 		
 	player.global_position = starting_position
 	player.can_act = true
+	tile_map.create_item("Steel Axe", 0, 0, false)
+	player.update_visuals()
 
 func reset_mobs():
 	for mob in mobs:
@@ -193,5 +213,3 @@ func create_mobs(rooms):
 			main.add_child(mob)
 			mob.global_position = new_pos*config.tile_size
 			mobs.append(mob)
-			
-

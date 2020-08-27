@@ -4,8 +4,9 @@ onready var config = $"/root/Config"
 onready var audio = $"/root/AudioManager"
 onready var vis_map = get_parent().get_node("VisibilityMap")
 
-var item_name = "Test Item"
-var stackable = false
+var item_name = ""
+var item_info = null
+var equipped = false
 var count = 1
 
 var disabled = false
@@ -20,21 +21,24 @@ func _process(_delta):
 		visible = false
 	else:
 		visible = true
-		
+
 func add_item_to_inventory(entity):
 	entity.combat_text(item_name)
 	
 	# Check if item should be stacked
 	for item in entity.inventory:
-		if item.stackable && item.item_name == item_name:
+		if item.item_info["stackable"] && item.item_name == item_name:
 			item.count += 1
 			queue_free()
 			return
 	
 	# Otherwise add it regularly
 	entity.inventory.append(self)
-	var main = get_tree().current_scene
-	main.remove_child(self)
+	
+	# Only remove if it was in the scene.
+	if get_tree():
+		var main = get_tree().current_scene
+		main.remove_child(self)
 	
 func _on_Item_area_entered(area):
 	if area.name != "Player":

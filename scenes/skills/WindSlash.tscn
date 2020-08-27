@@ -41,3 +41,4 @@ speed_scale = 2.0
 process_material = SubResource( 2 )
 texture = ExtResource( 1 )
 [connection signal="area_entered" from="." to="." method="_on_WindSlash_area_entered"]
+[connection signal="body_entered" from="." to="." method="_on_WindSlash_body_entered"]

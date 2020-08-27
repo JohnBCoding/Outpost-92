@@ -1,0 +1,55 @@
+{
+    "Coin": {
+        "type": "currency",
+        "useable": false,
+        "stackable": true,
+        "equippable": false,
+        "skill": "",
+        "stats": {}
+    },
+    "Steel Axe": {
+        "type": "weapon",
+        "useable": false,
+        "stackable": false,
+        "equippable": {
+            "slot": "Main Hand"
+        },
+        "skill": "windslash",
+        "stats": {
+            "max_hp": 0,
+            "attack": 1,
+            "defense": 0,
+            "power": 0
+        }
+    },
+    "Riot Shield": {
+        "type": "utility",
+        "useable": false,
+        "stackable": false,
+        "equippable": {
+            "slot": "Off Hand"
+        },
+        "skill": "windslash",
+        "stats": {
+            "max_hp": 0,
+            "attack": 0,
+            "defense": 1,
+            "power": 0
+        }
+    },
+    "Tattered Clothing": {
+        "type": "armor",
+        "useable": false,
+        "stackable": false,
+        "equippable": {
+            "slot": "Armor"
+        },
+        "skill": "windslash",
+        "stats": {
+            "max_hp": 1,
+            "attack": 0,
+            "defense": 0,
+            "power": 0
+        }
+    }
+}

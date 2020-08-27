@@ -5,7 +5,9 @@ onready var vis_map = get_parent().get_node("VisibilityMap")
 
 var input_buffer = []
 onready var States = get_parent().States
-signal toggle_inventory(new_inventory, new_equipped)
+signal toggle_inventory(new_inventory)
+signal swapped_skill()
+var skill_type = null
 
 func _ready():
 	call_deferred("update_visuals")
@@ -31,12 +33,7 @@ func _unhandled_input(event):
 				return
 			
 			if get_parent().state == States.Targeting:
-				var skill = Skills["windslash"].instance()
-				var scene = get_tree().current_scene
-				skill.position = Vector2(position.x + (config.tile_size/2), position.y + (config.tile_size/2))
-				skill.direction = config.inputs["movement"][dir]
-				scene.add_child(skill)
-				active_skill = skill
+				create_skill("windslash", skill_type, dir)
 				get_parent().change_state(States.Targeting)
 			else:
 				move_entity(config.inputs["movement"][dir])
@@ -45,33 +42,45 @@ func _unhandled_input(event):
 	if event.is_action_pressed("inventory"):
 		if get_parent().state == States.Main or get_parent().state == States.Inventory:
 			get_parent().change_state(States.Inventory)
-			emit_signal("toggle_inventory", inventory, equipped)
+			emit_signal("toggle_inventory", inventory)
 	
 	elif event.is_action_pressed("weapon_skill"):
-		if can_act && (get_parent().state == States.Main or get_parent().state == States.Targeting):
-			get_parent().change_state(States.Targeting)
+		if equipped_skills["weapon"]["skill"] && !equipped_skills["weapon"]["current_cooldown"]:
+			if can_act && (get_parent().state == States.Main or get_parent().state == States.Targeting):
+				skill_type = "weapon"
+				get_parent().change_state(States.Targeting)
 			
 	elif event.is_action_pressed("ui_cancel"):
+		if get_parent().state == States.Inventory:
+			emit_signal("toggle_inventory", inventory)
 		get_parent().change_state(States.Main)
-		emit_signal("toggle_inventory", inventory, equipped)
-
+		
 func update_visuals():
-	yield(get_tree().create_timer(.15), "timeout")
-	var cell_pos = vis_map.world_to_map(position)
-	var player_center = center(cell_pos.x, cell_pos.y)
-	var space_state = get_world_2d().direct_space_state
-	for x in range(16):
-		for y in range(16):
-			if vis_map.get_cell(x, y) == 0:
-				var x_dir = 1 if x < cell_pos.x else -1
-				var y_dir = 1 if y < cell_pos.y else -1
-				var point = center(x, y) + Vector2(x_dir, y_dir) * config.tile_size / 2
-				
-				var blocked = space_state.intersect_ray(player_center, point, [self], collision_layer)
+	var map_pos = tile_map.world_to_map(position)
+	for x in range(map_pos.x - sight_range, map_pos.x + sight_range):
+		for y in range(map_pos.y - sight_range, map_pos.y + sight_range):
+			var line = vis_map.bres_line(map_pos, Vector2(x, y))
+			for point in line:
+				vis_map.set_cellv(point, -1)
+				if tile_map.get_cellv(point) in vis_map.blockers:
+					break
 
-				if !blocked || (blocked.position - point).length() < 1:
-					vis_map.set_cell(x, y, -1)
-					
-
+# Signals
 func _on_Tween_tween_all_completed():
 	update_visuals()
+	
+func _on_Item_used_from_inventory(index):
+	var item = inventory[index]
+	if item.item_info["equippable"]:
+		item.equipped = not item.equipped
+		if item.equipped:
+			if equipped[item.item_info["equippable"]["slot"]]:
+				equipped[item.item_info["equippable"]["slot"]].equipped = false
+			equipped[item.item_info["equippable"]["slot"]] = item
+			equipped_skills[item.item_info["type"]]["skill"] = item.item_info["skill"]
+		else:
+			equipped[item.item_info["equippable"]["slot"]] = null
+			equipped_skills[item.item_info["type"]]["skill"] = null
+		calculate_stats()
+		emit_signal("swapped_skill")
+	end_turn()

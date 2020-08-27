@@ -30,21 +30,28 @@ func run_ai():
 	
 func chase_ai(distance, dir):
 	if distance <= 1:
-		player.take_damage(stats.attack)
+		player.take_damage(mod_stats.attack)
 		position += -dir * config.tile_size
 		bump_tween(dir)
 		audio.play_effect("basic_attack")
-	elif distance <= 4:
+		
+	elif distance <= sight_range:
 		# Get path indexs
 		var start_index = tile_map.calculate_point_index(position / config.tile_size)
 		var end_index = tile_map.calculate_point_index(player.position / config.tile_size)
 		
-		# Cast a ray towards the player.
-		movement_ray.cast_to = (-dir * config.tile_size)
-		movement_ray.force_raycast_update()
-		
+		# Use bres line towards player
+		var player_map_pos = tile_map.world_to_map(player.position)
+		var map_pos = tile_map.world_to_map(position)
+		var line = vis_map.bres_line(map_pos, player_map_pos)
+		var visible = true
+		for point in line:
+			if tile_map.get_cellv(point) in vis_map.blockers:
+				visible = false
+				break
+				
 		# Do pathfinding if player is seen
-		if !movement_ray.is_colliding():
+		if visible:
 			if last_known_target == null:
 				combat_text("!")
 			last_known_target = player.position

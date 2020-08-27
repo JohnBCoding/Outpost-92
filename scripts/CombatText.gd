@@ -1,6 +1,6 @@
 extends Label
 
-func show_value(value, travel, duration, player=false, crit=false):
+func show_value(value, travel, duration, player=false, _crit=false):
 	text = str(value)
 	if typeof(value) == TYPE_INT:
 		text = "-"+str(value)

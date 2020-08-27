@@ -9,9 +9,31 @@ const hitEffect = preload("res://scenes/HitEffect.tscn")
 
 # Skills
 const Skills = {
-	"windslash": preload("res://scenes/skills/WindSlash.tscn")
+	"windslash": {
+		"scene": preload("res://scenes/skills/WindSlash.tscn"),
+		"icon": preload("res://resources/sprites/ui/icons/windslash_icon.png"),
+		"stats": {
+			"damage": 2,
+			"distance": 1,
+			"cooldown": 3,
+		}
+	}
 }
 var active_skill = null
+var equipped_skills = {
+	"weapon": {
+		"skill": null,
+		"current_cooldown": 0
+	},
+	"armor":  {
+		"skill": null,
+		"current_cooldown": 0
+	},
+	"utility":  {
+		"skill": null,
+		"current_cooldown": 0
+	},
+}
 
 # Movement
 onready var movement_ray = $MovementRay
@@ -22,17 +44,25 @@ signal damage_taken(hp_values)
 
 # Combat
 var can_act = false
-var stats = {
-	hp = 2,
-	max_hp = 2,
-	attack = 1,
-	defense = 0,
-	power = 0,
+var base_stats = {
+	"hp": 2,
+	"max_hp": 2,
+	"attack": 1,
+	"defense": 0,
+	"power": 0,
 }
-var sight_range = 6
+var mod_stats = {
+	"hp": 0,
+	"max_hp": 0,
+	"attack": 0,
+	"defense": 0,
+	"power": 0,
+}
+
+var sight_range = 4
 var hit = false
 
-# Invetory
+# Inventory
 var inventory = []
 var equipped = {
 	"Main Hand": null,
@@ -42,7 +72,8 @@ var equipped = {
 
 func _ready():
 	position = position.snapped(Vector2.ONE * config.tile_size)
-
+	calculate_stats()
+	
 func _process(_delta):
 	if hit:
 		modulate = Color(.4, .4, .4, 1)
@@ -57,23 +88,40 @@ func end_turn():
 	if active_skill:
 		yield(active_skill._completed(), "completed")
 	yield(get_tree().create_timer(.01), "timeout")
-	get_parent().get_turn()
 	
+	# Decrease cooldowns
+	for skill in equipped_skills.keys():
+		if equipped_skills[skill]["current_cooldown"] > 0:
+			equipped_skills[skill]["current_cooldown"] -= 1
+			
+	get_parent().get_turn()
+
+# Combat
+func calculate_stats():
+	if mod_stats["hp"] == 0:
+		mod_stats["hp"] = base_stats["hp"]
+		
+	for b_stat in base_stats.keys():
+		if b_stat != "hp":
+			mod_stats[b_stat] = base_stats[b_stat]
+	
+	for slot in equipped.keys():
+		if equipped[slot]:
+			for e_stat in equipped[slot].item_info["stats"]:
+				mod_stats[e_stat] += equipped[slot].item_info["stats"][e_stat]
+				
 func take_damage(damage):
-	damage = damage - stats.defense
+	damage = damage - mod_stats.defense
 	create_hit_effect()
-	combat_text(damage)
+	combat_text(int(damage))
 	
 	if damage > 0:
-		stats.hp -= damage
+		mod_stats.hp -= damage
 		
-	emit_signal("damage_taken", [stats.hp, stats.max_hp])
+	emit_signal("damage_taken", [mod_stats.hp, mod_stats.max_hp])
 	hit = true
-	if stats.hp <= 0:
+	if mod_stats.hp <= 0:
 		queue_free()
-		
-func center(x, y):
-	return Vector2((x + 0.5) * config.tile_size, (y + 0.5) * config.tile_size)
 
 func move_entity(dir):
 	movement_ray.cast_to = dir * config.tile_size
@@ -99,6 +147,13 @@ func bump_tween(dir):
 	
 	tween.start()
 
+# Skill animations
+func windslash_tween():
+	tween.interpolate_property(self, "scale", Vector2(0.5, 0.5), Vector2(1, 1), 
+	1.0/speed, Tween.TRANS_LINEAR, Tween.EASE_IN_OUT)
+	
+	tween.start()
+
 # Particles and effects
 func combat_text(text, crit=false):
 	var combat_text = combatText.instance()
@@ -120,3 +175,18 @@ func create_hit_effect():
 	
 	# Center its effect position
 	hit_effect.global_position = Vector2(global_position.x + (config.tile_size/2), global_position.y + (config.tile_size/2))
+	
+# Skills
+func create_skill(skill, type, dir):
+	var new_skill = Skills[skill]["scene"].instance()
+	var scene = get_tree().current_scene
+	new_skill.position = Vector2(position.x + (config.tile_size/2), position.y + (config.tile_size/2))
+	new_skill.direction = config.inputs["movement"][dir]
+	new_skill.stats = Skills[skill]["stats"].duplicate()
+	new_skill.skill_user = self
+	scene.add_child(new_skill)
+	active_skill = new_skill
+	equipped_skills[type]["current_cooldown"] = new_skill.stats.cooldown
+	
+func center(x, y):
+	return Vector2((x + 0.5) * config.tile_size, (y + 0.5) * config.tile_size)
