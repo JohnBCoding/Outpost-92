@@ -11,7 +11,9 @@ var effects = {
 	"item_pickup": preload("res://resources/audio/effects/item_pickup.wav"),
 	"skills": {
 		"windslash_use": preload("res://resources/audio/effects/skills/windslash_use.wav"),
-		"windslash_hit": preload("res://resources/audio/effects/skills/windslash_hit.wav")
+		"windslash_hit": preload("res://resources/audio/effects/skills/windslash_hit.wav"),
+		"overheat_use": preload("res://resources/audio/effects/skills/overheat_use.wav"),
+		"overheat_hit": preload("res://resources/audio/effects/skills/overheat_hit.wav")
 	}
 	
 }

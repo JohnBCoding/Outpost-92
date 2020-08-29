@@ -1,0 +1,21 @@
+[remap]
+
+importer="wav"
+type="AudioStreamSample"
+path="res://.import/overheat_use.wav-785247249e686c2fd20b560eb2befd76.sample"
+
+[deps]
+
+source_file="res://resources/audio/effects/skills/overheat_use.wav"
+dest_files=[ "res://.import/overheat_use.wav-785247249e686c2fd20b560eb2befd76.sample" ]
+
+[params]
+
+force/8_bit=false
+force/mono=false
+force/max_rate=false
+force/max_rate_hz=44100
+edit/trim=false
+edit/normalize=false
+edit/loop=false
+compress/mode=0

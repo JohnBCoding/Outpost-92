@@ -38,13 +38,13 @@ func get_turn():
 	var turn = turns.pop_front()
 	if turn:
 		if current_turn:
-			if current_turn[1]:
+			if is_instance_valid(current_turn[1]):
 				current_turn[1].can_act = false
 				turns.append([current_turn[0]+10, current_turn[1]])
 				turns.sort_custom(TurnSorter, "sort_ascending")
 		
 		current_turn = turn
-		if turn[1]:
+		if is_instance_valid(turn[1]):
 			if turn[1].name=="Player":
 				yield(get_tree().create_timer(.125), "timeout")
 			turn[1].can_act = true
@@ -59,7 +59,7 @@ func get_turn():
 	
 	# Refresh astar with new mob locations.
 	for mob in mobs:
-		if !mob:
+		if !is_instance_valid(mob):
 			mobs.erase(mob)
 	tile_map.generate_astar(mobs)
 
@@ -82,10 +82,10 @@ func _process(_delta):
 		return
 	
 	# Readjust UI based on player position
-	if player.global_position.y < ((get_viewport().size.y/config.tile_size)/4)+8:
+	if player.global_position.y < config.tile_size*3:
 		ui_status.set_global_position(Vector2(2, 116))
 		ui_inventory.set_global_position(Vector2(2, 66))
-	elif player.global_position.y > (get_viewport().size.y/config.tile_size):
+	elif player.global_position.y > ((config.MAP_HEIGHT*config.tile_size) - config.tile_size*4):
 		ui_status.set_global_position(Vector2(2, 2))
 		ui_inventory.set_global_position(Vector2(2, 13))
 
@@ -108,7 +108,7 @@ func _on_Player_bumped_something(entity_pos, ray):
 		handle_bumped_tile(tile_pos)
 	elif collider.is_in_group("mobs"):
 		audio.play_effect("basic_attack")
-		collider.take_damage(player.mod_stats.attack)
+		collider.take_damage(player.current_stats.attack)
 	
 	
 func handle_bumped_tile(tile_pos):
@@ -135,7 +135,8 @@ func handle_bumped_tile(tile_pos):
 		tile_map.TileType.CHEST_ACTIVE:
 			tile_map.set_cell(tile_pos[0], tile_pos[1], tile_map.TileType.CHEST_ACTIVE+1)
 			audio.play_effect("chest_open")
-			tile_map.create_item("Steel Axe", 0, 0, false)
+			var test_items = ["Coin", "Steel Axe", "Riot Shield", "Tattered Clothing"]
+			tile_map.create_item(test_items[randi() % len(test_items)], 0, 0, false)
 
 func goto_new_level():
 	tile_map.reset_map()
@@ -183,8 +184,10 @@ func create_player(starting_position):
 		player.connect("bumped_something", self, "_on_Player_bumped_something")
 		player.connect("damage_taken", ui_status, "_on_Player_damage_taken")
 		player.connect("swapped_skill", ui_status, "_on_Player_swapped_skill")
+		player.connect("item_selected", ui_status, "_on_Player_item_selected")
 		player.connect("toggle_inventory", ui_inventory, "_on_Player_toggle_inventory")
 		ui_inventory.connect("item_used", player, "_on_Item_used_from_inventory")
+		ui_inventory.connect("item_selected", player, "_on_Item_selected_from_inventory")
 		
 		# Add to tree and set its starting position
 		var main = get_tree().current_scene
@@ -192,7 +195,8 @@ func create_player(starting_position):
 		
 	player.global_position = starting_position
 	player.can_act = true
-	tile_map.create_item("Steel Axe", 0, 0, false)
+	var test_items = ["Steel Axe", "Riot Shield", "Tattered Clothing"]
+	tile_map.create_item(test_items[randi() % len(test_items)], 0, 0, false)
 	player.update_visuals()
 
 func reset_mobs():
@@ -209,6 +213,13 @@ func create_mobs(rooms):
 		var new_pos = Vector2(x, y)
 		if tile_map.get_cellv(new_pos) == tile_map.TileType.FLOOR && (new_pos*config.tile_size) != player.global_position:
 			var mob = Mob.instance()
+			var mob_types = mob.mob_info.keys()
+			var mob_type = mob_types[randi() % len(mob_types)]
+			mob.get_node("Sprite").texture = mob.mob_info[mob_type]["sprite"]
+			mob.base_stats = mob.mob_info[mob_type]["stats"]
+			mob.ai = mob.mob_info[mob_type]["ai"]
+			for skill in mob.mob_info[mob_type]["skills"]:
+				mob.equipped_skills[skill]["skill"] = mob.mob_info[mob_type]["skills"][skill]
 			var main = get_tree().current_scene
 			main.add_child(mob)
 			mob.global_position = new_pos*config.tile_size

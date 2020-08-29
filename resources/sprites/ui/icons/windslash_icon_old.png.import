@@ -2,15 +2,15 @@
 
 importer="texture"
 type="StreamTexture"
-path="res://.import/mutated.png-664db8a04fa81b2746b6e7de8f4a11f3.stex"
+path="res://.import/windslash_icon_old.png-a47f6e5e4ee3715c4f0b24abe8384f71.stex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://resources/sprites/mobs/mutated.png"
-dest_files=[ "res://.import/mutated.png-664db8a04fa81b2746b6e7de8f4a11f3.stex" ]
+source_file="res://resources/sprites/ui/icons/windslash_icon_old.png"
+dest_files=[ "res://.import/windslash_icon_old.png-a47f6e5e4ee3715c4f0b24abe8384f71.stex" ]
 
 [params]
 

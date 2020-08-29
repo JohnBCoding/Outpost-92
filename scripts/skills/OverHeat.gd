@@ -3,17 +3,21 @@ extends Area2D
 onready var audio = $"/root/AudioManager"
 onready var tween_dir = $TweenDir
 onready var tween_a = $TweenA
+onready var sprite = $Sprite
+onready var particle = $Particles2D
 
 var direction = Vector2.UP
 var skill_user = "Player"
 var stats = {}
-var current_cooldown = null
+var area_hit = []
 
 func _ready():
-	skill_user.windslash_tween()
+	if skill_user.name != "Player":
+		sprite.modulate = Color(1, 0, 0.302, 1)
+		particle.process_material.color = Color(1, 0, 0.302, 1)
+	
 	rotation = direction.angle()
-	audio.play_skill_effect("windslash_use")
-	calculate_stats()
+	audio.play_skill_effect("overheat_use")
 	
 	var movement = (stats["distance"] * direction)*8
 	var end_position = Vector2(position.x + movement.x, position.y + movement.y)
@@ -24,25 +28,24 @@ func _ready():
 			1.0, 0.2, .1 * stats["distance"],
 			Tween.TRANS_LINEAR, Tween.EASE_IN_OUT)
 	tween_a.start()
-
+	
 func calculate_stats():
 	stats["distance"] += skill_user.current_stats.power
 	stats["damage"] += skill_user.current_stats.power
 	
-func _on_WindSlash_area_entered(area):
-	if !is_instance_valid(skill_user) || !is_instance_valid(area):
-		return
-		
-	if area.name != skill_user.name:
-		audio.play_skill_effect("windslash_hit")
-		area.take_damage(stats["damage"])
-		stats["damage"] -= 1
-
 func _completed(end_early = false):
 	if !end_early:
 		yield($TweenDir, "tween_all_completed")
-	skill_user.active_skill = null
-	queue_free()
+	if is_instance_valid(skill_user):
+		skill_user.active_skill = null
+		skill_user.take_damage(stats["damage"] / 4)
 
-func _on_WindSlash_body_entered(_body):
-	stats["damage"] -= 1
+	queue_free()
+	
+
+func _on_OverHeat_area_entered(area):
+	if area:
+		if area != skill_user && !(area in area_hit):
+			audio.play_skill_effect("overheat_use")
+			area.take_damage(stats["damage"])
+			area_hit.append(area)

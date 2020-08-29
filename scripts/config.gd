@@ -7,7 +7,8 @@ const inputs = {
 		"left": Vector2.LEFT,
 		"up": Vector2.UP,
 		"down": Vector2.DOWN
-	}
+	},
+	"skills": ["weapon_skill", "armor_skill", "utility_skill"]
 }
 
 # Map

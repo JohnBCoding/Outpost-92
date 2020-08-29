@@ -7,6 +7,8 @@ var input_buffer = []
 onready var States = get_parent().States
 signal toggle_inventory(new_inventory)
 signal swapped_skill()
+signal item_selected(item)
+
 var skill_type = null
 
 func _ready():
@@ -21,7 +23,7 @@ func _process(_delta):
 			end_turn()
 		
 func _unhandled_input(event):
-	if tween.is_active():
+	if tween.is_active() || len(input_buffer) > 1:
 		return
 
 	for dir in config.inputs["movement"].keys():
@@ -33,23 +35,24 @@ func _unhandled_input(event):
 				return
 			
 			if get_parent().state == States.Targeting:
-				create_skill("windslash", skill_type, dir)
+				var skill = create_skill("windslash", skill_type, config.inputs["movement"][dir])
 				get_parent().change_state(States.Targeting)
 			else:
 				move_entity(config.inputs["movement"][dir])
 			end_turn()
 	
+	for skill in config.inputs["skills"]:
+		if event.is_action_pressed(skill):
+			var type = skill.replace("_skill", "")
+			if equipped_skills[type]["skill"] && !equipped_skills[type]["current_cooldown"]:
+				if can_act && (get_parent().state == States.Main or get_parent().state == States.Targeting):
+					skill_type = type
+					get_parent().change_state(States.Targeting)
+				
 	if event.is_action_pressed("inventory"):
 		if get_parent().state == States.Main or get_parent().state == States.Inventory:
 			get_parent().change_state(States.Inventory)
-			emit_signal("toggle_inventory", inventory)
-	
-	elif event.is_action_pressed("weapon_skill"):
-		if equipped_skills["weapon"]["skill"] && !equipped_skills["weapon"]["current_cooldown"]:
-			if can_act && (get_parent().state == States.Main or get_parent().state == States.Targeting):
-				skill_type = "weapon"
-				get_parent().change_state(States.Targeting)
-			
+			emit_signal("toggle_inventory", inventory)	
 	elif event.is_action_pressed("ui_cancel"):
 		if get_parent().state == States.Inventory:
 			emit_signal("toggle_inventory", inventory)
@@ -84,3 +87,9 @@ func _on_Item_used_from_inventory(index):
 		calculate_stats()
 		emit_signal("swapped_skill")
 	end_turn()
+	
+func _on_Item_selected_from_inventory(index):
+	var item = null
+	if index != null:
+		item = inventory[index]
+	emit_signal("item_selected", item)
