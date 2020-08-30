@@ -36,16 +36,17 @@ func calculate_stats():
 func _completed(end_early = false):
 	if !end_early:
 		yield($TweenDir, "tween_all_completed")
-	if is_instance_valid(skill_user):
-		skill_user.active_skill = null
-		skill_user.take_damage(stats["damage"] / 4)
+		if is_instance_valid(skill_user):
+			skill_user.take_damage(stats["damage"] / 4)
 
 	queue_free()
 	
 
 func _on_OverHeat_area_entered(area):
-	if area:
-		if area != skill_user && !(area in area_hit):
-			audio.play_skill_effect("overheat_use")
-			area.take_damage(stats["damage"])
-			area_hit.append(area)
+	if !is_instance_valid(skill_user) || !is_instance_valid(area):
+		return
+		
+	if area != skill_user && !(area in area_hit):
+		audio.play_skill_effect("overheat_use")
+		area.take_damage(stats["damage"])
+		area_hit.append(area)

@@ -5,6 +5,8 @@ onready var astar = AStar.new()
 
 onready var Item = preload("res://scenes/Item.tscn")
 
+var tile_content = [[]]
+
 enum TileType {
 	WALL,
 	FLOOR,
@@ -90,7 +92,7 @@ func create_map(_level):
 			
 	# Add entrance and exit stairs.
 	set_cell(rooms[0].position.x, rooms[0].position.y, 3)
-	set_cell(rooms[-1].position.x, rooms[-1].position.y, 2)
+	set_cell(rooms[-1].end.x, rooms[-1].end.y-1, 2)
 	
 	# Add objects
 	add_objects(rooms)
@@ -173,8 +175,8 @@ func add_items(rooms):
 	var max_items = randi() % config.MAX_ITEMS_PER_LEVEL
 	while item_num < max_items:
 		var room = rooms[(randi() % len(rooms))]
-		var x = randi() % int(room.size.x) + (room.position.x)
-		var y = randi() % int(room.size.y) + (room.position.y)
+		var x = randi() % int(room.end.x) + (room.position.x)
+		var y = randi() % int(room.end.y) + (room.position.y)
 		if get_cell(x, y) == TileType.FLOOR:
 			create_item("Coin", x, y)
 			item_num += 1
@@ -194,6 +196,16 @@ func create_item(name, x, y, add_to_map=true):
 	
 			
 ### Pathfinding
+func is_walkable(pos_to_check):
+	if !get_cellv(pos_to_check) in walkable_tile_types:
+		return false
+	for mob in get_parent().mobs:
+		if is_instance_valid(mob):
+			if mob.grid_pos == pos_to_check:
+				return false
+				
+	return true
+	
 func generate_astar(mobs):
 	astar = AStar.new()
 	var points = add_walkable_cells()
@@ -234,8 +246,8 @@ func connect_cells(points, mobs):
 		
 		# Check if mob is blocking a point, if so, disable it.
 		for mob in mobs:
-			if mob:
-				if mob.position == (point * config.tile_size):
+			if is_instance_valid(mob):
+				if mob.grid_pos == point:
 					astar.set_point_disabled(point_index, true)
 					break
 	

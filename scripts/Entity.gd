@@ -2,9 +2,9 @@ extends Area2D
 
 onready var config = $"/root/Config"
 onready var audio = $"/root/AudioManager"
+onready var tile_map = get_parent().get_node("TileMap")
 
-#
-var can_resume = true
+var grid_pos = null
 
 # Particle effects
 const combatText = preload("res://scenes/CombatText.tscn")
@@ -53,20 +53,23 @@ var equipped_skills = {
 }
 
 # Movement
-onready var movement_ray = $MovementRay
-onready var tween = $Tween
+onready var tween_move = $TweenMove
+onready var tween_effect = $TweenEffect
 var base_tween_speed = 8
-signal bumped_something(point, normal)
+
+# Signal setup
+signal bumped_something(entity, bumped_pos)
 signal damage_taken(hp_values)
 
 # Combat
 var can_act = false
 var base_stats = {
-	"hp": 2,
-	"max_hp": 2,
-	"attack": 1,
+	"hp": 0,
+	"max_hp": 0,
+	"attack": 0,
 	"defense": 0,
 	"power": 0,
+	"turn_speed": 0
 }
 var mod_stats = {
 	"hp": 0,
@@ -74,6 +77,7 @@ var mod_stats = {
 	"attack": 0,
 	"defense": 0,
 	"power": 0,
+	"turn_speed": 0
 }
 var current_stats = {
 	"hp": 0,
@@ -81,6 +85,7 @@ var current_stats = {
 	"attack": 0,
 	"defense": 0,
 	"power": 0,
+	"turn_speed": 0
 }
 
 var sight_range = 4
@@ -95,24 +100,36 @@ var equipped = {
 }
 
 func _ready():
-	position = position.snapped(Vector2.ONE * config.tile_size)
 	calculate_stats(true)
-	
+
+# Turn handlers
 func end_turn():
 	can_act = false
-	if tween.is_active():
-		yield($Tween, "tween_all_completed")
+	if tween_move.is_active():
+		yield($TweenMove, "tween_all_completed")
+	elif tween_effect.is_active():
+		yield($TweenEffect, "tween_all_completed")
 	if is_instance_valid(active_skill):
 		yield(active_skill._completed(), "completed")
-	yield(get_tree().create_timer(.01), "timeout")
 	
 	# Decrease cooldowns
 	for skill in equipped_skills.keys():
 		if equipped_skills[skill]["current_cooldown"] > 0:
 			equipped_skills[skill]["current_cooldown"] -= 1
 			
-	get_parent().get_turn()
-
+func _completed():
+	if is_instance_valid(active_skill):
+		yield(get_tree().create_timer(.01), "timeout")
+	else:
+		active_skill = null
+	
+	if tween_move.is_active():
+		yield($TweenMove, "tween_all_completed")
+	elif tween_effect.is_active():
+		yield($TweenMove, "tween_all_completed")
+	else:
+		yield(get_tree().create_timer(.001), "timeout")
+	
 # Combat
 func calculate_stats(game_start = false):
 	for m_stat in mod_stats.keys():
@@ -138,44 +155,48 @@ func take_damage(damage):
 	emit_signal("damage_taken", [current_stats.hp, current_stats.max_hp])
 	hit = true
 	if current_stats.hp <= 0:
+		if is_instance_valid(active_skill):
+			active_skill.queue_free()
 		queue_free()
 
 func move_entity(dir):
-	movement_ray.cast_to = dir * config.tile_size
-	movement_ray.force_raycast_update()
-	if !movement_ray.is_colliding():
+	if tile_map.is_walkable(grid_pos + dir):
+		grid_pos += dir
 		audio.play_effect("walk")
 		move_tween(dir)
 	else:
-		emit_signal("bumped_something", position, movement_ray)
-		position += dir * config.tile_size
-		bump_tween(-dir)
-
+		if name == "Player":
+			emit_signal("bumped_something", self, grid_pos + dir)
+			position += dir * config.tile_size
+			bump_tween(-dir)
+			
 # Animations		
 func move_tween(dir):
-	tween.interpolate_property(self, "position", position, position + dir * config.tile_size,
+	if tween_move.is_active():
+		yield($TweenMove, "tween_all_completed")
+	tween_move.interpolate_property(self, "position", position, position + (dir * config.tile_size),
 	1.0/base_tween_speed, Tween.TRANS_BOUNCE, Tween.EASE_IN_OUT)
 	
-	tween.start()
+	tween_move.start()
 	
 func bump_tween(dir):
-	tween.interpolate_property(self, "position", position, position + dir * config.tile_size,
+	tween_effect.interpolate_property(self, "position", position, position + dir * config.tile_size,
 	1.0/base_tween_speed, Tween.TRANS_SINE, Tween.EASE_OUT_IN)
 	
-	tween.start()
+	tween_effect.start()
 
 # Skill animations
 func windslash_tween():
-	tween.interpolate_property(self, "scale", Vector2(0.5, 0.5), Vector2(1, 1), 
+	tween_effect.interpolate_property(self, "scale", Vector2(0.5, 0.5), Vector2(1, 1), 
 	1.0/base_tween_speed, Tween.TRANS_LINEAR, Tween.EASE_IN_OUT)
 	
-	tween.start()
+	tween_effect.start()
 	
 func overheat_tween():
-	tween.interpolate_property(self, "modulate:a", .4, 1, 
-	8.0/base_tween_speed, Tween.TRANS_LINEAR, Tween.EASE_IN)
+	tween_effect.interpolate_property(self, "modulate:a", .2, 1, 
+	2.0/base_tween_speed, Tween.TRANS_LINEAR, Tween.EASE_IN)
 	
-	tween.start()
+	tween_effect.start()
 
 # Particles and effects
 func combat_text(text, crit=false):
@@ -203,7 +224,7 @@ func create_hit_effect():
 func create_skill(skill, type, dir):
 	var new_skill = Skills[skill]["scene"].instance()
 	var scene = get_tree().current_scene
-	new_skill.position = Vector2(position.x + (config.tile_size/2), position.y + (config.tile_size/2))
+	new_skill.position = Vector2((grid_pos.x*config.tile_size) + (config.tile_size/2), (grid_pos.y*config.tile_size) + (config.tile_size/2))
 	new_skill.direction = dir
 	new_skill.stats = Skills[skill]["stats"].duplicate()
 	new_skill.skill_user = self

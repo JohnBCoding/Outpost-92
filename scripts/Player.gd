@@ -1,6 +1,5 @@
 extends "res://scripts/Entity.gd"
 
-onready var tile_map = get_parent().get_node("TileMap")
 onready var vis_map = get_parent().get_node("VisibilityMap")
 
 var input_buffer = []
@@ -16,26 +15,27 @@ func _ready():
 
 func _process(_delta):
 	# Handle input buffer
-	if can_act && input_buffer && !tween.is_active():
+	if can_act && input_buffer && !tween_move.is_active() && !tween_effect.is_active():
 		var key = input_buffer.pop_front()
 		if key in config.inputs["movement"].keys():
-			move_entity(config.inputs["movement"][key])
-			end_turn()
-		
+			if get_parent().state == States.Main:
+				move_entity(config.inputs["movement"][key])
+				end_turn()
+	pass
 func _unhandled_input(event):
-	if tween.is_active() || len(input_buffer) > 1:
+	if tween_move.is_active() || tween_effect.is_active():
 		return
 
 	for dir in config.inputs["movement"].keys():
 		if event.is_action_pressed(dir):
 			if !can_act:
 				input_buffer.append(dir)
-				if len(input_buffer) > 3:
+				if len(input_buffer) > 1:
 					input_buffer.pop_front()
 				return
 			
 			if get_parent().state == States.Targeting:
-				var skill = create_skill("windslash", skill_type, config.inputs["movement"][dir])
+				var skill = create_skill(equipped_skills[skill_type]["skill"], skill_type, config.inputs["movement"][dir])
 				get_parent().change_state(States.Targeting)
 			else:
 				move_entity(config.inputs["movement"][dir])
@@ -59,17 +59,19 @@ func _unhandled_input(event):
 		get_parent().change_state(States.Main)
 		
 func update_visuals():
-	var map_pos = tile_map.world_to_map(position)
-	for x in range(map_pos.x - sight_range, map_pos.x + sight_range):
-		for y in range(map_pos.y - sight_range, map_pos.y + sight_range):
-			var line = vis_map.bres_line(map_pos, Vector2(x, y))
+	for x in range(grid_pos.x - sight_range, grid_pos.x + sight_range):
+		for y in range(grid_pos.y - sight_range, grid_pos.y + sight_range):
+			var line = vis_map.bres_line(grid_pos, Vector2(x, y))
 			for point in line:
 				vis_map.set_cellv(point, -1)
 				if tile_map.get_cellv(point) in vis_map.blockers:
 					break
 
 # Signals
-func _on_Tween_tween_all_completed():
+func _on_TweenMove_tween_all_completed():
+	update_visuals()
+	
+func _on_TweenEffect_tween_all_completed():
 	update_visuals()
 	
 func _on_Item_used_from_inventory(index):
@@ -93,3 +95,9 @@ func _on_Item_selected_from_inventory(index):
 	if index != null:
 		item = inventory[index]
 	emit_signal("item_selected", item)
+
+
+
+
+
+

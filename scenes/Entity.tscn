@@ -25,7 +25,10 @@ tracks/0/keys = {
 extents = Vector2( 4, 4 )
 
 [node name="Entity" type="Area2D"]
-priority = 1.0
+gravity = 0.0
+linear_damp = 0.0
+angular_damp = 0.0
+priority = 5.0
 script = ExtResource( 2 )
 
 [node name="Sprite" type="Sprite" parent="."]
@@ -41,10 +44,7 @@ anims/idle = SubResource( 1 )
 position = Vector2( 4, 4 )
 shape = SubResource( 2 )
 
-[node name="Tween" type="Tween" parent="."]
+[node name="TweenMove" type="Tween" parent="."]
+playback_process_mode = 0
 
-[node name="MovementRay" type="RayCast2D" parent="."]
-position = Vector2( 4, 4 )
-scale = Vector2( 0.5, 0.5 )
-cast_to = Vector2( 8, 0 )
-collide_with_areas = true
+[node name="TweenEffect" type="Tween" parent="."]
