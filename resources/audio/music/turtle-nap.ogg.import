@@ -1,0 +1,15 @@
+[remap]
+
+importer="ogg_vorbis"
+type="AudioStreamOGGVorbis"
+path="res://.import/turtle-nap.ogg-28ba7e02ad4884a03f874e1a83cd7dc8.oggstr"
+
+[deps]
+
+source_file="res://resources/audio/music/turtle-nap.ogg"
+dest_files=[ "res://.import/turtle-nap.ogg-28ba7e02ad4884a03f874e1a83cd7dc8.oggstr" ]
+
+[params]
+
+loop=true
+loop_offset=0

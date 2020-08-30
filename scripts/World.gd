@@ -94,6 +94,7 @@ func _init():
 
 func _ready():
 	audio.volume_db = -5
+	audio.start_music()
 	goto_new_level()
 
 	ui_status.init_ui(player)

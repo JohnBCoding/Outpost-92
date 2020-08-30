@@ -1,0 +1,15 @@
+[remap]
+
+importer="ogg_vorbis"
+type="AudioStreamOGGVorbis"
+path="res://.import/deepwater-ruins.ogg-ea1cfe489c8d1bf6956c2056abf1f9e0.oggstr"
+
+[deps]
+
+source_file="res://resources/audio/music/deepwater-ruins.ogg"
+dest_files=[ "res://.import/deepwater-ruins.ogg-ea1cfe489c8d1bf6956c2056abf1f9e0.oggstr" ]
+
+[params]
+
+loop=true
+loop_offset=0

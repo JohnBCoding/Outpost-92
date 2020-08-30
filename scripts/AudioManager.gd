@@ -1,6 +1,13 @@
 extends AudioStreamPlayer
 
-# load sounds
+onready var music_player = $Music
+# load audio files
+var music = {
+	"main": preload("res://resources/audio/music/deepwater-ruins.ogg"),
+	"boss": preload("res://resources/audio/music/night-chip.ogg"),
+	"won": preload("res://resources/audio/music/night-chip.ogg"),
+	"lost": preload("res://resources/audio/music/night-chip.ogg")
+}
 var effects = {
 	"walk": preload("res://resources/audio/effects/walk.wav"),
 	"bump": preload("res://resources/audio/effects/wall_bump.wav"),
@@ -18,7 +25,10 @@ var effects = {
 	
 }
 
-
+func start_music():
+	music_player.stream = music["main"]
+	music_player.play()
+	
 func play_effect(effect):
 	if playing:
 		yield(self, "finished")
