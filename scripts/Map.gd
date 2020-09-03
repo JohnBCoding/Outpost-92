@@ -175,8 +175,8 @@ func add_items(rooms):
 	var max_items = randi() % config.MAX_ITEMS_PER_LEVEL
 	while item_num < max_items:
 		var room = rooms[(randi() % len(rooms))]
-		var x = randi() % int(room.end.x) + (room.position.x)
-		var y = randi() % int(room.end.y) + (room.position.y)
+		var x = randi() % int(room.size.x) + (room.position.x)
+		var y = randi() % int(room.size.y) + (room.position.y)
 		if get_cell(x, y) == TileType.FLOOR:
 			create_item("Coin", x, y)
 			item_num += 1
@@ -192,6 +192,7 @@ func create_item(name, x, y, add_to_map=true):
 		main.add_child(item)
 		item.global_position = Vector2(x, y)*config.tile_size
 	else:
+		print(item)
 		item.add_item_to_inventory(get_parent().player)
 	
 			

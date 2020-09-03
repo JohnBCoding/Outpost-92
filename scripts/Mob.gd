@@ -8,12 +8,13 @@ var mob_info = {
 		"sprite": preload("res://resources/sprites/mobs/goblin.png"),
 		"ai": funcref(self, "chase_ai"),
 		"stats": {
-			"hp": 2,
-			"max_hp": 2,
+			"hp": 1,
+			"max_hp": 1,
 			"attack": 2,
 			"defense": 0,
 			"power": 0,
-			"turn_speed": 100
+			"turn_speed": 100,
+			"sight_range": 3
 		},
 		"skills": {}
 	},
@@ -21,12 +22,13 @@ var mob_info = {
 		"sprite": preload("res://resources/sprites/mobs/mutated.png"),
 		"ai": funcref(self, "mutated_ai"),
 		"stats": {
-			"hp": 3,
-			"max_hp": 3,
+			"hp": 20,
+			"max_hp": 20,
 			"attack": 0,
 			"defense": 0,
 			"power": 1,
-			"turn_speed": 75
+			"turn_speed": 75,
+			"sight_range": 4
 		},
 		"skills": {
 			"weapon": "overheat",
@@ -89,13 +91,12 @@ func run_ai():
 	if !can_act:
 		return
 	
-	can_act = false
 	var distance = grid_pos.distance_to(player.grid_pos)
 	var dir = (grid_pos - player.grid_pos)
 	
-	ai.call_func(distance, dir)
-
-
+	yield(ai.call_func(distance, dir), "completed")
+	can_act = false
+	
 func chase_ai(distance, dir):
 	if distance <= 1:
 		player.take_damage(current_stats.attack)
@@ -103,45 +104,39 @@ func chase_ai(distance, dir):
 		bump_tween(dir)
 		audio.play_effect("basic_attack")
 		
-	elif distance <= sight_range:
+	elif distance <= current_stats["sight_range"] || last_known_target:
 		path_find(player)
 		
-				
-func mutated_ai(distance, dir):
+	yield(get_tree().create_timer(.0001), "timeout")
 	
+func mutated_ai(distance, dir):
 	var explode = false
-	if distance <= 1:
-		if equipped_skills["weapon"]["delayed_action_cooldown"] == null:
-				equipped_skills["weapon"]["delayed_action_cooldown"] = 2
-				combat_text("Heating Up")
-				print(grid_pos)
-				overheat_tween()
-		else:
-			equipped_skills["weapon"]["delayed_action_cooldown"] -= 1
-			if equipped_skills["weapon"]["delayed_action_cooldown"] <= 0:
-				explode = true
+	if !active_skill:
+		if distance <= 1:
+			if equipped_skills["weapon"]["delayed_action_cooldown"] == null:
+					equipped_skills["weapon"]["delayed_action_cooldown"] = 2
+					combat_text("Heating Up")
+					overheat_tween()
 			else:
-				overheat_tween()
-		
-	elif distance <= 3:
-		if path_find(player):
-			return
+				equipped_skills["weapon"]["delayed_action_cooldown"] -= 1
+				if equipped_skills["weapon"]["delayed_action_cooldown"] <= 0:
+					explode = true
+				else:
+					overheat_tween()
 			
-		if equipped_skills["weapon"]["delayed_action_cooldown"] != null:
-			equipped_skills["weapon"]["delayed_action_cooldown"] -= 1
-			if equipped_skills["weapon"]["delayed_action_cooldown"] <= 0:
-				explode = true
-			else:
-				overheat_tween()
-
-	if explode:
-		var skills_created = []
-		for dir in config.inputs["movement"]:
-			skills_created.append(create_skill("overheat", "weapon", config.inputs["movement"][dir]))
-		for skill in skills_created:
-			yield(skill._completed(), "completed")
-		return
-
-		
-		
-
+		elif distance <= current_stats["sight_range"] || last_known_target:
+			if !path_find(player):
+				if equipped_skills["weapon"]["delayed_action_cooldown"] != null:
+					equipped_skills["weapon"]["delayed_action_cooldown"] -= 1
+					if equipped_skills["weapon"]["delayed_action_cooldown"] <= 0:
+						explode = true
+					else:
+						overheat_tween()
+	
+		if explode:
+			equipped_skills["weapon"]["delayed_action_cooldown"] = null
+			var skills_created = []
+			for dir in config.inputs["movement"]:
+				skills_created.append(create_skill("overheat", "weapon", config.inputs["movement"][dir]))
+				
+	yield(get_tree().create_timer(.0001), "timeout")

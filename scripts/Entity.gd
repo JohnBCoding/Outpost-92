@@ -69,7 +69,8 @@ var base_stats = {
 	"attack": 0,
 	"defense": 0,
 	"power": 0,
-	"turn_speed": 0
+	"turn_speed": 0,
+	"sight_range": 5
 }
 var mod_stats = {
 	"hp": 0,
@@ -77,7 +78,8 @@ var mod_stats = {
 	"attack": 0,
 	"defense": 0,
 	"power": 0,
-	"turn_speed": 0
+	"turn_speed": 0,
+	"sight_range": 0
 }
 var current_stats = {
 	"hp": 0,
@@ -85,10 +87,12 @@ var current_stats = {
 	"attack": 0,
 	"defense": 0,
 	"power": 0,
-	"turn_speed": 0
+	"turn_speed": 0,
+	"sight_range": 0
 }
 
-var sight_range = 4
+var status = []
+
 var hit = false
 
 # Inventory
@@ -104,29 +108,30 @@ func _ready():
 
 # Turn handlers
 func end_turn():
-	can_act = false
+	
 	if tween_move.is_active():
 		yield($TweenMove, "tween_all_completed")
 	elif tween_effect.is_active():
 		yield($TweenEffect, "tween_all_completed")
 	if is_instance_valid(active_skill):
 		yield(active_skill._completed(), "completed")
+		active_skill = null
+	can_act = false
 	
 	# Decrease cooldowns
 	for skill in equipped_skills.keys():
 		if equipped_skills[skill]["current_cooldown"] > 0:
 			equipped_skills[skill]["current_cooldown"] -= 1
-			
+	
 func _completed():
 	if is_instance_valid(active_skill):
-		yield(get_tree().create_timer(.01), "timeout")
-	else:
+		yield(active_skill._completed(), "completed")
 		active_skill = null
-	
+
 	if tween_move.is_active():
 		yield($TweenMove, "tween_all_completed")
 	elif tween_effect.is_active():
-		yield($TweenMove, "tween_all_completed")
+		yield($TweenEffect, "tween_all_completed")
 	else:
 		yield(get_tree().create_timer(.001), "timeout")
 	
@@ -146,6 +151,7 @@ func calculate_stats(game_start = false):
 					
 func take_damage(damage):
 	damage = damage - current_stats.defense
+	print(damage)
 	create_hit_effect()
 	combat_text(int(damage))
 	
@@ -165,10 +171,13 @@ func move_entity(dir):
 		audio.play_effect("walk")
 		move_tween(dir)
 	else:
-		if name == "Player":
-			emit_signal("bumped_something", self, grid_pos + dir)
-			position += dir * config.tile_size
-			bump_tween(-dir)
+		emit_signal("bumped_something", self, grid_pos + dir)
+		position += dir * config.tile_size
+		bump_tween(-dir)
+	
+		# Bumping wall doesn't use turn	
+		if tile_map.get_cellv(grid_pos + dir) == tile_map.TileType.WALL:
+			return true
 			
 # Animations		
 func move_tween(dir):
@@ -202,7 +211,9 @@ func overheat_tween():
 func combat_text(text, crit=false):
 	var combat_text = combatText.instance()
 	var scene = get_tree().current_scene
-	var x_pos = (global_position.x - config.tile_size) - (len(str(text)) + 1 / 2 )
+	var x_pos = (global_position.x - config.tile_size) - (len(str(text))) + 1
+	if typeof(text) == TYPE_INT:
+		x_pos -= 1
 	combat_text.get_child(0).rect_global_position = Vector2(x_pos, global_position.y - (config.tile_size+2))
 	scene.add_child(combat_text)
 	combat_text.get_child(0).show_value(text, Vector2(0, -config.tile_size), .5, (name=="Player"), crit)
@@ -211,10 +222,10 @@ func create_hit_effect():
 	var scene = get_tree().current_scene
 	var hit_effect = hitEffect.instance()
 	var particles = hit_effect.get_child(0)
+	particles.process_material.color = Color(1, 1, 1, 1)
 	if name != "Player":
 		particles.process_material.color = Color(1, 0, 0.302, 1)
-	else:
-		particles.process_material.color = Color(1, 1, 1, 1)
+	
 	scene.add_child(hit_effect)
 	
 	# Center its effect position

@@ -16,6 +16,8 @@ onready var utility_panel = $Skills/Background/UtilityPanel
 onready var utility_label = $Skills/Background/UtilityPanel/UtilityLabel
 onready var utility_sprite = $Skills/Background/UtilityPanel/UtilitySprite
 
+onready var tween = $Tween
+
 onready var player = null
 
 func init_ui(new_player):
@@ -59,6 +61,11 @@ func default_status():
 	attack.text = str(player.current_stats["attack"])
 	defense.text = str(player.current_stats["defense"])
 	power.text = str(player.current_stats["power"])
+
+func move_location_tween(destination):
+	tween.interpolate_property(self, "rect_position", rect_position, destination,
+	.1, Tween.TRANS_LINEAR, Tween.EASE_IN_OUT)
+	tween.start()
 	
 # Signals
 func _on_Player_damage_taken(value):

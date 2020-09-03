@@ -29,19 +29,20 @@ func _ready():
 			Tween.TRANS_LINEAR, Tween.EASE_IN_OUT)
 	tween_a.start()
 	
+	_completed()
+	
+	
 func calculate_stats():
 	stats["distance"] += skill_user.current_stats.power
 	stats["damage"] += skill_user.current_stats.power
 	
-func _completed(end_early = false):
-	if !end_early:
-		yield($TweenDir, "tween_all_completed")
-		if is_instance_valid(skill_user):
-			skill_user.take_damage(stats["damage"] / 4)
+func _completed():
+	yield($TweenDir, "tween_all_completed")
+	if is_instance_valid(skill_user):
+		skill_user.take_damage(stats["damage"] / 4)
 
 	queue_free()
 	
-
 func _on_OverHeat_area_entered(area):
 	if !is_instance_valid(skill_user) || !is_instance_valid(area):
 		return

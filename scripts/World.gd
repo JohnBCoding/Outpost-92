@@ -4,6 +4,7 @@ onready var config = $"/root/Config"
 onready var audio = $"/root/AudioManager"
 onready var tile_map = $TileMap
 onready var visibility_map = $VisibilityMap
+onready var bit_mask = $BitMask
 onready var Player = preload("res://scenes/Player.tscn")
 onready var Mob = preload("res://scenes/Mob.tscn")
 
@@ -47,6 +48,9 @@ func reset_turns():
 
 func check_for_turn():
 	# Check if new turn is needed to be pulled
+	if is_instance_valid(current_turn[1]):
+		yield(current_turn[1]._completed(), "completed")
+		
 	var check_for_turn = true
 	if player.can_act:
 		check_for_turn = false
@@ -61,11 +65,10 @@ func check_for_turn():
 func get_turn():
 	turns.sort_custom(TurnSorter, "sort_ascending")
 	current_turn = turns.pop_front()
-	print(turns)
 	if current_turn:
 		if is_instance_valid(current_turn[1]):
 			if current_turn[1].name == "Player":
-				change_state(States.Main, false)
+				change_state(prev_state, false)
 			current_turn[1].can_act = true
 			if !current_turn[1].name == "Player":
 				change_state(States.AI, false)
@@ -104,23 +107,22 @@ func _process(_delta):
 		return
 	
 	# Readjust UI based on player position
-	if player.global_position.y < config.tile_size*3:
-		ui_status.set_global_position(Vector2(2, 116))
+	if player.global_position.y < config.tile_size*5:
+		ui_status.move_location_tween(Vector2(2, 116))
 		ui_inventory.set_global_position(Vector2(2, 66))
-	elif player.global_position.y > ((config.MAP_HEIGHT*config.tile_size) - config.tile_size*4):
-		ui_status.set_global_position(Vector2(2, 2))
+	elif player.global_position.y > ((config.MAP_HEIGHT*config.tile_size) - config.tile_size*6):
+		ui_status.move_location_tween(Vector2(2, 2))
 		ui_inventory.set_global_position(Vector2(2, 13))
 	
-	if is_instance_valid(current_turn[1]):
-		yield(current_turn[1]._completed(), "completed")
-		check_for_turn()
-	else:
-		check_for_turn()
+	check_for_turn()
 	
 func change_state(new_state, toggle = true):
 	if state == new_state:
 		if toggle:
-			state = prev_state
+			if prev_state == States.AI:
+				state = States.Main
+			else:
+				state = prev_state
 	else:
 		prev_state = state
 		state = new_state
@@ -135,7 +137,6 @@ func _on_Player_bumped_something(entity, bumped_pos):
 		handle_bumped_tile(bumped, bumped_pos)
 	elif bumped.is_in_group("mobs"):
 		print(bumped.grid_pos)
-	
 		audio.play_effect("basic_attack")
 		bumped.take_damage(player.current_stats.attack)
 	
@@ -163,6 +164,9 @@ func handle_bumped_tile(tile, tile_pos):
 			audio.play_effect("chest_open")
 			var test_items = ["Coin", "Steel Axe", "Riot Shield", "Tattered Clothing"]
 			tile_map.create_item(test_items[randi() % len(test_items)], 0, 0, false)
+	
+	# Recalculate bitmask
+	bit_mask.setup_bitmask(tile_map)
 
 ### Game start && Level
 func goto_new_level():
@@ -184,6 +188,9 @@ func goto_new_level():
 	
 	# Generate astar pathfinding.
 	tile_map.generate_astar(mobs)
+	
+	# Generate bit mask
+	bit_mask.setup_bitmask(tile_map)
 	
 	# Start
 	get_turn()

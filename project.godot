@@ -132,7 +132,6 @@ utility_skill={
 [physics]
 
 common/physics_fps=300
-2d/sleep_threshold_linear=2.0
 
 [rendering]
 

@@ -24,6 +24,7 @@ tracks/0/keys = {
 }
 
 [node name="Item" type="Area2D"]
+z_index = 1
 collision_layer = 4
 script = ExtResource( 2 )
 

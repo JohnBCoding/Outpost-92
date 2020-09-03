@@ -38,29 +38,33 @@ func _unhandled_input(event):
 				var skill = create_skill(equipped_skills[skill_type]["skill"], skill_type, config.inputs["movement"][dir])
 				get_parent().change_state(States.Targeting)
 			else:
-				move_entity(config.inputs["movement"][dir])
+				var bumped_wall = move_entity(config.inputs["movement"][dir])
+				if bumped_wall:
+					return
 			end_turn()
 	
 	for skill in config.inputs["skills"]:
 		if event.is_action_pressed(skill):
 			var type = skill.replace("_skill", "")
 			if equipped_skills[type]["skill"] && !equipped_skills[type]["current_cooldown"]:
-				if can_act && (get_parent().state == States.Main or get_parent().state == States.Targeting):
+				if can_act && (get_parent().state == States.Main || get_parent().state == States.Targeting):
+					print(true)
 					skill_type = type
 					get_parent().change_state(States.Targeting)
 				
 	if event.is_action_pressed("inventory"):
-		if get_parent().state == States.Main or get_parent().state == States.Inventory:
+		if get_parent().state == States.Main || get_parent().state == States.Inventory:
 			get_parent().change_state(States.Inventory)
 			emit_signal("toggle_inventory", inventory)	
 	elif event.is_action_pressed("ui_cancel"):
+		print(get_parent().state)
 		if get_parent().state == States.Inventory:
 			emit_signal("toggle_inventory", inventory)
-		get_parent().change_state(States.Main)
+		get_parent().change_state(States.Main, false)
 		
 func update_visuals():
-	for x in range(grid_pos.x - sight_range, grid_pos.x + sight_range):
-		for y in range(grid_pos.y - sight_range, grid_pos.y + sight_range):
+	for x in range(grid_pos.x - current_stats["sight_range"], grid_pos.x + current_stats["sight_range"]):
+		for y in range(grid_pos.y - current_stats["sight_range"], grid_pos.y + current_stats["sight_range"]):
 			var line = vis_map.bres_line(grid_pos, Vector2(x, y))
 			for point in line:
 				vis_map.set_cellv(point, -1)
